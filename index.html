@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>CCFD 2025 Events + Platoon Demo</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .controls {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    #status {
+      margin: 1rem 0;
+      padding: 1rem;
+      border-radius: 4px;
+    }
+    .status-loading  { background: #fff3cd; color: #856404; }
+    .status-success  { background: #d4edda; color: #155724; }
+    .status-error    { background: #f8d7da; color: #721c24; }
+    
+    .event-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .event-card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      border: 1px solid #dee2e6;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .event-venue {
+      color: #6c757d;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+      font-weight: bold;
+    }
+    .event-title {
+      font-size: 1.25rem;
+      margin: 0.5rem 0;
+      color: #2c3e50;
+    }
+    .event-date, .event-price {
+      color: #495057;
+      margin: 0.25rem 0;
+    }
+    .venue-select, .date-select {
+      padding: 0.5rem;
+      margin-right: 1rem;
+      min-width: 200px;
+      border-radius: 4px;
+      border: 1px solid #dee2e6;
+    }
+    .event-type {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      margin-top: 0.5rem;
+    }
+    .type-sports     { background: #e6f4ea;  color: #1e4620; }
+    .type-concert    { background: #fce8e6;  color: #c5221f; }
+    .type-convention { background: #e8f0fe;  color: #1a73e8; }
+    .type-racing     { background: #ffd700;  color: #b8860b; }
+    .type-show       { background: #dda0dd;  color: #4b0082; }
+
+    .platoon-badges {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      width: 100%;
+    }
+    .platoon-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.5rem;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      margin: 0.25rem 0;
+      font-weight: bold;
+      color: #fff;
+    }
+
+    .calendar-btn {
+      background: #0078d4;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .calendar-btn:hover {
+      background: #106ebe;
+    }
+    .event-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    /* Calendar Styles */
+    .calendar-section {
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 1px solid #dee2e6;
+    }
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 2rem;
+      margin-top: 1rem;
+    }
+    .calendar-month {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 1rem;
+    }
+    .month-header {
+      font-size: 1.25rem;
+      color: #2c3e50;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #e9ecef;
+      margin-bottom: 1rem;
+    }
+    .calendar-event {
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
+      border-left: 3px solid #4a5568;
+      background: #f8f9fa;
+    }
+    .calendar-event-date {
+      font-weight: bold;
+      color: #4a5568;
+      font-size: 0.9rem;
+    }
+    .calendar-event-title {
+      color: #2d3748;
+      margin: 0.25rem 0;
+    }
+    .calendar-event.type-sports      { border-left-color: #1e4620; }
+    .calendar-event.type-concert     { border-left-color: #c5221f; }
+    .calendar-event.type-convention  { border-left-color: #1a73e8; }
+    .calendar-event.type-racing      { border-left-color: #b8860b; }
+    .calendar-event.type-show        { border-left-color: #4b0082; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>CCFD 2025 Events & Platoons Demo</h1>
+
+  <div class="controls">
+    <select id="venueSelect" class="venue-select">
+      <option value="all">All Venues</option>
+      <option value="allegiant">Allegiant</option>
+      <option value="tmobile">T-Mobile</option>
+      <option value="conventioncenter">ConventionCenter</option>
+      <option value="sphere">Sphere</option>
+      <option value="speedway">Speedway</option>
+    </select>
+
+    <select id="dateSelect" class="date-select">
+      <option value="all">All Dates</option>
+      <option value="upcoming">Upcoming Events</option>
+      <option value="month">Next 30 Days</option>
+      <option value="quarter">Next 120 Days</option>
+    </select>
+  </div>
+
+  <div id="status" class="status-loading">Initializing...</div>
+  <div id="resultArea" class="event-grid"></div>
+
+  <div class="calendar-section">
+    <h2>Event Calendar</h2>
+    <div id="calendarArea" class="calendar-grid"></div>
+  </div>
+</div>
+
+<script>
+  const statusEl    = document.getElementById('status');
+  const resultEl    = document.getElementById('resultArea');
+  const venueSelect = document.getElementById('venueSelect');
+  const dateSelect  = document.getElementById('dateSelect');
+
+  // Exact 2025 color-coded schedule from your provided image
+  // Days map to 'red', 'black', or 'green'
+  const monthlySchedules = {
+    1: {
+      1:'red',2:'green',3:'black',4:'green',5:'red',6:'black',7:'green',8:'red',9:'green',10:'black',11:'red',12:'green',
+      13:'black',14:'red',15:'green',16:'black',17:'red',18:'green',19:'black',20:'red',21:'black',22:'red',23:'green',
+      24:'black',25:'green',26:'red',27:'black',28:'green',29:'red',30:'green',31:'black'
+    },
+    2: {
+      1:'green',2:'red',3:'black',4:'black',5:'black',6:'red',7:'black',8:'green',9:'black',10:'green',11:'black',
+      12:'green',13:'red',14:'green',15:'green',16:'green',17:'red',18:'black',19:'red',20:'black',21:'red',22:'black',
+      23:'black',24:'black',25:'green',26:'black',27:'green',28:'red'
+    },
+    3: {
+      1:'green',2:'red',3:'black',4:'red',5:'black',6:'red',7:'black',8:'green',9:'black',10:'green',11:'black',
+      12:'green',13:'black',14:'green',15:'green',16:'green',17:'red',18:'black',19:'red',20:'black',21:'red',
+      22:'black',23:'black',24:'black',25:'green',26:'black',27:'green',28:'black',29:'green',30:'red',31:'red'
+    },
+    4: {
+      1:'black',2:'green',3:'red',4:'black',5:'black',6:'black',7:'red',8:'black',9:'green',10:'black',11:'red',
+      12:'black',13:'green',14:'green',15:'green',16:'red',17:'green',18:'red',19:'green',20:'red',21:'black',
+      22:'red',23:'black',24:'green',25:'black',26:'black',27:'green',28:'green',29:'red',30:'green'
+    },
+    5: {
+      1:'red',2:'green',3:'red',4:'black',5:'red',6:'black',7:'green',8:'black',9:'green',10:'black',11:'green',
+      12:'green',13:'green',14:'red',15:'green',16:'red',17:'green',18:'red',19:'black',20:'red',21:'black',
+      22:'green',23:'black',24:'black',25:'green',26:'red',27:'green',28:'green',29:'red',30:'green',31:'red'
+    },
+    6: {
+      1:'red',2:'black',3:'green',4:'red',5:'black',6:'black',7:'black',8:'green',9:'red',10:'black',11:'green',
+      12:'black',13:'black',14:'black',15:'green',16:'green',17:'green',18:'red',19:'black',20:'red',21:'black',
+      22:'green',23:'red',24:'green',25:'green',26:'red',27:'black',28:'red',29:'black',30:'green'
+    },
+    7: {
+      1:'green',2:'red',3:'black',4:'green',5:'red',6:'green',7:'black',8:'green',9:'red',10:'black',11:'green',
+      12:'black',13:'black',14:'black',15:'green',16:'red',17:'black',18:'red',19:'black',20:'red',21:'black',
+      22:'green',23:'red',24:'black',25:'black',26:'green',27:'red',28:'black',29:'green',30:'black',31:'green'
+    },
+    8: {
+      1:'red',2:'black',3:'green',4:'red',5:'black',6:'black',7:'black',8:'green',9:'red',10:'black',11:'green',
+      12:'black',13:'green',14:'green',15:'black',16:'red',17:'black',18:'red',19:'black',20:'red',21:'black',
+      22:'green',23:'red',24:'green',25:'green',26:'red',27:'black',28:'red',29:'green',30:'black',31:'red'
+    },
+    9: {
+      1:'green',2:'red',3:'black',4:'green',5:'red',6:'black',7:'green',8:'red',9:'green',10:'black',11:'red',
+      12:'green',13:'green',14:'green',15:'black',16:'red',17:'black',18:'red',19:'black',20:'red',21:'black',
+      22:'green',23:'red',24:'black',25:'black',26:'green',27:'red',28:'black',29:'green',30:'red'
+    },
+    10: {
+      1:'black',2:'green',3:'red',4:'black',5:'green',6:'red',7:'black',8:'green',9:'red',10:'green',11:'black',
+      12:'green',13:'red',14:'black',15:'red',16:'black',17:'green',18:'red',19:'black',20:'green',21:'black',
+      22:'green',23:'red',24:'black',25:'green',26:'red',27:'black',28:'green',29:'red',30:'black',31:'green'
+    },
+    11: {
+      1:'red',2:'black',3:'green',4:'red',5:'black',6:'green',7:'black',8:'green',9:'red',10:'black',11:'green',
+      12:'black',13:'red',14:'green',15:'black',16:'red',17:'black',18:'red',19:'black',20:'red',21:'black',
+      22:'green',23:'red',24:'black',25:'green',26:'black',27:'red',28:'green',29:'black',30:'red'
+    },
+    12: {
+      1:'green',2:'red',3:'black',4:'green',5:'black',6:'red',7:'black',8:'green',9:'red',10:'black',11:'green',
+      12:'black',13:'red',14:'green',15:'black',16:'red',17:'black',18:'green',19:'red',20:'black',21:'green',
+      22:'red',23:'black',24:'green',25:'red',26:'black',27:'green',28:'red',29:'black',30:'green',31:'red'
+    }
+  };
+
+  // Maps color keywords to platoon letters + color codes
+  const colorToPlatoon = {
+    'red':   { platoon: 'A', color: '#ff0000' },
+    'black': { platoon: 'B', color: '#000000' },
+    'green': { platoon: 'C', color: '#008000' }
+  };
+
+  // Build a final { "YYYY-MM-DD": {platoon, color} } schedule
+  function createPlatoonSchedule() {
+    const schedule = {};
+    Object.entries(monthlySchedules).forEach(([month, days]) => {
+      Object.entries(days).forEach(([day, colorKey]) => {
+        const dateStr = `2025-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
