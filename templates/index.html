@@ -283,3 +283,359 @@
     Object.entries(monthlySchedules).forEach(([month, days]) => {
       Object.entries(days).forEach(([day, colorKey]) => {
         const dateStr = `2025-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        schedule[dateStr] = colorToPlatoon[colorKey] || { platoon: '?', color: '#666666' };
+      });
+    });
+    return schedule;
+  }
+
+  const platoonSchedule = createPlatoonSchedule();
+
+  // For events that have single or multi-day date strings
+  function parseDateRange(dateStr) {
+    const parts = dateStr.split('-').map(p => p.trim());
+    try {
+      if (parts.length > 1) {
+        const [startMonth, startDayRaw] = parts[0].split(' ');
+        const startDay = parseInt(startDayRaw);
+        const [endDayRaw, maybeYear] = parts[1].split(',');
+        const endDay  = parseInt(endDayRaw);
+        const year    = maybeYear ? parseInt(maybeYear.trim()) : 2025;
+
+        const startDate = new Date(`${startMonth} ${startDay}, ${year}`);
+        const endDate   = new Date(`${startMonth} ${endDay}, ${year}`);
+
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          throw new Error('Invalid date range');
+        }
+        return { startDate, endDate };
+      } else {
+        const singleDate = new Date(dateStr);
+        if (isNaN(singleDate.getTime())) {
+          throw new Error(`Invalid single date: ${dateStr}`);
+        }
+        return { startDate: singleDate, endDate: singleDate };
+      }
+    } catch (err) {
+      console.error("Date parsing error:", err);
+      return null;
+    }
+  }
+
+  function formatDateKey(dateObj) {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  // For sorting & filtering, we only check the *start* date if multi-day
+  function parseEventDate(dateStr) {
+    return new Date(dateStr.split('-')[0].trim());
+  }
+
+  // ICS Export
+  function generateICS(event) {
+    const eventDate = parseEventDate(event.date);
+    const endDate   = new Date(eventDate);
+    endDate.setHours(endDate.getHours() + 3); // 3-hour window
+
+    const formatICSDate = (date) => date.toISOString().replace(/-|:|\.\d{3}/g, '');
+    return `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+DTSTART:${formatICSDate(eventDate)}
+DTEND:${formatICSDate(endDate)}
+SUMMARY:${event.title}
+LOCATION:${event.venue}
+DESCRIPTION:${event.type} event\\nPrice: ${event.price || 'N/A'}\\nMore info: ${event.url || 'N/A'}
+END:VEVENT
+END:VCALENDAR`;
+  }
+
+  function downloadICS(event) {
+    const icsContent = generateICS(event);
+    const blob       = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const link       = document.createElement('a');
+    link.href        = window.URL.createObjectURL(blob);
+    link.download    = `${event.title.replace(/\s+/g, '_')}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  // Sample event data
+  const allEvents = [
+    {
+      title: 'Las Vegas Raiders vs Kansas City Chiefs',
+      date: 'January 25, 2025',
+      venue: 'Allegiant Stadium',
+      price: '$150 - $750',
+      type: 'Sports',
+      url: 'https://www.raiders.com/tickets/individual-game-tickets'
+    },
+    {
+      title: 'Super Bowl LVIII',
+      date: 'February 11, 2025',
+      venue: 'Allegiant Stadium',
+      price: '$4,000 - $12,000',
+      type: 'Sports',
+      url: 'https://www.nfl.com/super-bowl/event-info'
+    },
+    {
+      title: 'Vegas Golden Knights vs Montreal Canadiens',
+      date: 'January 22, 2025',
+      venue: 'T-Mobile Arena',
+      price: '$75 - $400',
+      type: 'Sports',
+      url: 'https://www.t-mobilearena.com/events/vgk-canadiens'
+    },
+    {
+      title: 'UFC 300',
+      date: 'February 8, 2025',
+      venue: 'T-Mobile Arena',
+      price: '$200 - $1500',
+      type: 'Sports',
+      url: 'https://www.t-mobilearena.com/events/ufc-300'
+    },
+    {
+      title: 'CES 2025',
+      date: 'January 19-22, 2025',
+      venue: 'Las Vegas Convention Center',
+      type: 'Convention',
+      url: 'https://www.vegasmeansbusiness.com/events/ces-2025'
+    },
+    {
+      title: 'World of Concrete 2025',
+      date: 'February 5-8, 2025',
+      venue: 'Las Vegas Convention Center',
+      type: 'Convention',
+      url: 'https://www.vegasmeansbusiness.com/events/woc-2025'
+    },
+    {
+      title: 'U2:UV Achtung Baby Live',
+      date: 'January 26-27, 2025',
+      venue: 'Sphere',
+      price: '$250 - $1500',
+      type: 'Show',
+      url: 'https://www.thespherevegas.com/events/u2'
+    },
+    {
+      title: 'Phish: Sphere Residency',
+      date: 'February 1-4, 2025',
+      venue: 'Sphere',
+      price: '$195 - $995',
+      type: 'Show',
+      url: 'https://www.thespherevegas.com/events/phish'
+    },
+    {
+      title: 'NASCAR Cup Series: Pennzoil 400',
+      date: 'March 3, 2025',
+      venue: 'Las Vegas Motor Speedway',
+      price: '$85 - $350',
+      type: 'Racing',
+      url: 'https://www.lvms.com/events/pennzoil-400'
+    },
+    {
+      title: 'Electric Daisy Carnival (EDC)',
+      date: 'May 17-19, 2025',
+      venue: 'Las Vegas Motor Speedway',
+      price: '$399 - $799',
+      type: 'Concert',
+      url: 'https://www.lvms.com/events/edc-2025'
+    }
+  ];
+
+  function updateStatus(message, type = 'loading') {
+    statusEl.textContent = message;
+    statusEl.className   = `status-${type}`;
+  }
+
+  function getEventTypeClass(eventType) {
+    switch(eventType.toLowerCase()) {
+      case 'sports':     return 'type-sports';
+      case 'concert':    return 'type-concert';
+      case 'convention': return 'type-convention';
+      case 'racing':     return 'type-racing';
+      case 'show':       return 'type-show';
+      default:           return '';
+    }
+  }
+
+  function handleEventClick(e, eventTitle) {
+    console.log(`Clicked event: ${eventTitle}`);
+    const link = e.target.href;
+    if (!link || link === '#') {
+      e.preventDefault();
+      updateStatus('Event link unavailable.', 'error');
+      setTimeout(() => updateStatus('Events loaded successfully!', 'success'), 3000);
+    }
+  }
+
+  // Display the main event cards + day-by-day platoons
+  function displayResults(events) {
+    resultEl.innerHTML = events.map(event => {
+      const dateRange = parseDateRange(event.date);
+      
+      let platoonHtml;
+      if (!dateRange) {
+        platoonHtml = `<div class="platoon-badge" style="background-color:#666;">
+                         Invalid date format
+                       </div>`;
+      } else {
+        const { startDate, endDate } = dateRange;
+        if (startDate.getTime() === endDate.getTime()) {
+          // Single-day
+          const dateKey = formatDateKey(startDate);
+          const pInfo   = platoonSchedule[dateKey] || { platoon: "?", color: "#666" };
+          platoonHtml   = `
+            <div class="platoon-badge" style="background-color:${pInfo.color};">
+              ${pInfo.platoon} Platoon on ${startDate.toLocaleDateString()}
+            </div>
+          `;
+        } else {
+          // Multi-day
+          let html = '';
+          const current = new Date(startDate);
+          while (current <= endDate) {
+            const dateKey = formatDateKey(current);
+            const pInfo   = platoonSchedule[dateKey] || { platoon: "?", color: "#666" };
+            html += `
+              <div class="platoon-badge" style="background-color:${pInfo.color};">
+                ${pInfo.platoon} Platoon on ${current.toLocaleDateString()}
+              </div>
+            `;
+            current.setDate(current.getDate() + 1);
+          }
+          platoonHtml = html;
+        }
+      }
+
+      return `
+        <div class="event-card">
+          <div class="event-venue">${event.venue}</div>
+          <h3 class="event-title">${event.title}</h3>
+          <p class="event-date">📅 ${event.date}</p>
+          <div class="platoon-badges">${platoonHtml}</div>
+          ${event.price ? `<p class="event-price">💰 ${event.price}</p>` : ''}
+          ${event.type  ? `<span class="event-type ${getEventTypeClass(event.type)}">${event.type}</span>` : ''}
+          <div class="event-actions">
+            ${event.url ? `
+              <p>
+                <a href="${event.url}" target="_blank" rel="noopener noreferrer" 
+                   onclick="handleEventClick(event, '${event.title}')">More Info</a>
+              </p>` : ''}
+            <button onclick="downloadICS(${JSON.stringify(event).replace(/"/g, '&quot;')})" class="calendar-btn">
+              Add to Calendar 📅
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Update the mini calendar
+    updateCalendar(events);
+  }
+
+  // Generate the mini month-by-month calendar at the bottom
+  function updateCalendar(events) {
+    const calendarArea  = document.getElementById('calendarArea');
+    const eventsByMonth = {};
+
+    events.forEach(event => {
+      const date = parseEventDate(event.date);
+      const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
+      if (!eventsByMonth[monthKey]) {
+        eventsByMonth[monthKey] = {
+          name: date.toLocaleString('default', { month: 'long', year: 'numeric' }),
+          events: []
+        };
+      }
+      eventsByMonth[monthKey].events.push({ ...event, date });
+    });
+
+    // Sort within each month
+    Object.values(eventsByMonth).forEach(month => {
+      month.events.sort((a, b) => a.date - b.date);
+    });
+
+    const sortedMonths = Object.values(eventsByMonth)
+      .sort((a, b) => a.events[0].date - b.events[0].date);
+
+    calendarArea.innerHTML = sortedMonths.map(month => `
+      <div class="calendar-month">
+        <div class="month-header">${month.name}</div>
+        ${month.events.map(event => `
+          <div class="calendar-event type-${event.type.toLowerCase()}">
+            <div class="calendar-event-date">
+              ${event.date.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' })}
+            </div>
+            <div class="calendar-event-title">${event.title}</div>
+            <div class="event-venue">${event.venue}</div>
+          </div>
+        `).join('')}
+      </div>
+    `).join('');
+  }
+
+  // Filtering logic
+  function filterEvents() {
+    updateStatus('Filtering events...', 'loading');
+
+    let filteredEvents = [...allEvents];
+
+    // Venue
+    const chosenVenue = venueSelect.value.toLowerCase();
+    if (chosenVenue !== 'all') {
+      filteredEvents = filteredEvents.filter(evt => {
+        const normalizedVenue = evt.venue.toLowerCase().replace(/\s+/g, '');
+        return normalizedVenue.includes(chosenVenue);
+      });
+    }
+
+    // Date range
+    const chosenDateRange = dateSelect.value;
+    if (chosenDateRange !== 'all') {
+      const today = new Date();
+      filteredEvents = filteredEvents.filter(event => {
+        const eventDate = parseEventDate(event.date);
+        if (chosenDateRange === 'upcoming') {
+          return eventDate >= today;
+        } else if (chosenDateRange === 'month') {
+          const limit = new Date();
+          limit.setDate(today.getDate() + 30);
+          return eventDate >= today && eventDate <= limit;
+        } else if (chosenDateRange === 'quarter') {
+          const limit = new Date();
+          limit.setDate(today.getDate() + 120);
+          return eventDate >= today && eventDate <= limit;
+        }
+        return true;
+      });
+    }
+
+    displayResults(filteredEvents);
+    updateStatus('Events filtered!', 'success');
+  }
+
+  // Initialize
+  function init() {
+    try {
+      // Show all events on load
+      displayResults(allEvents);
+      updateStatus('Events loaded successfully!', 'success');
+
+      // Listen for changes
+      venueSelect.addEventListener('change', filterEvents);
+      dateSelect.addEventListener('change', filterEvents);
+    } catch (err) {
+      console.error("Error:", err);
+      updateStatus(`Error: ${err.message}`, 'error');
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>
+
